@@ -1,0 +1,28 @@
+telegram-bot  | Message(channel_chat_created=False, chat=Chat(first_name='Marina Data Science', id=727451800, type=<ChatType.PRIVATE>, username='avonadzh'), date=datetime.datetime(2025, 1, 4, 15, 50, 57, tzinfo=datetime.timezone.utc), delete_chat_photo=False, from_user=User(first_name='Marina Data Science', id=727451800, is_bot=False, language_code='ru', username='avonadzh'), group_chat_created=False, message_id=58, supergroup_chat_created=False, text='11')
+
+
+{
+    "message": {
+        "channel_chat_created": false,
+        "delete_chat_photo": false,
+        "group_chat_created": false,
+        "supergroup_chat_created": false,
+        "text": "Marina",
+        "chat": {
+            "first_name": "Marina Data Science",
+            "id": 727451800,
+            "type": "private",
+            "username": "avonadzh"
+        },
+        "date": 1735984953,
+        "message_id": 29,
+        "from": {
+            "first_name": "Marina Data Science",
+            "id": 727451800,
+            "is_bot": false,
+            "language_code": "en",
+            "username": "avonadzh"
+        }
+    },
+    "update_id": 846371214
+}
