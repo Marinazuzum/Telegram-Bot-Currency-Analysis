@@ -4,3 +4,4 @@ update_all_messages - Обновляет сообщения
 get_rates - Курс валют
 get_historical_rates - Курс валют за период
 plot - Выводит график валюты
+start - Приветствие

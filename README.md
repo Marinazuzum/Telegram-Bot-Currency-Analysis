@@ -23,7 +23,7 @@ This Telegram bot allows users to fetch and analyze currency exchange rates. It 
 5. Copy this token and save it as `BOT_TOKEN` in your `.env` file
 
 ### OpenExchangeRates API Key
-1. Go to [OpenExchangeRates](https://openexchangerates.org/)
+1. Go to [OpenExchangeRates](https://openexchangerates.org/) using email from https://10-minutemail.com/
 2. Click "Sign Up" and create a free account
 3. After registration, go to your account dashboard
 4. Find your API key under "App IDs"

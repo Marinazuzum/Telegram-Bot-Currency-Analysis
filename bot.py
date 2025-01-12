@@ -322,12 +322,15 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Функция эхо-ответ пользователю, сохранение данных в базу
     """
+    
     user_messages = update.message.text 
     user_username = update.message.from_user.username
 
-    await update.message.reply_text(update)
-    await update.message.reply_text(user_messages)
-    await update.message.reply_text(user_username)
+    await update.message.reply_text(update)#Используется для отладки, чтобы понять, какие данные Telegram передал в объекте update. 
+    #Это помогает при разработке новых функций
+    await update.message.reply_text(f"Привет, @{user_username}! Вы написали: {user_messages}")#бот повторяет текст, отправленный пользователем.
+    await update.message.reply_text(user_username) #Это может быть полезно, если бот логирует действия пользователей 
+    #или использует их имя для персонализации сообщений.
     
     # Сохранение в базу данных
     try:
@@ -361,6 +364,9 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         print(f'Ошибка:{e}')
 
 async def return_all_messages(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Функция для получения всех сообщений пользователя из базы данных и отправки их обратно пользователю через Telegram-бота
+    """
     user_username = update.message.from_user.username
 
     try:
@@ -379,14 +385,18 @@ async def return_all_messages(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text(f'Ошибка:{e}')
 
 async def delete_all_messages(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Функция для удаления всех сообщений пользователя из базы данных и отправки их обратно пользователю через Telegram-бота
+    """
     user_username = update.message.from_user.username
 
     try:
         conn=psycopg2.connect(URL)
         cursor=conn.cursor()
         cursor.execute(f"DELETE from messages where username = '{user_username}';")
-        await update.message.reply_text("Deleted")
-
+        await update.message.reply_text("Deleted все удалено")
+#В вашей функции выполняется только запрос на удаление записей из таблицы messages. 
+# Однако, запрос на удаление не затрагивает таблицу message_updates/ то есть там можно отследить всю историю всех записей
         conn.commit()
         cursor.close()
         conn.close()
@@ -395,6 +405,9 @@ async def delete_all_messages(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text(f'Ошибка:{e}')
 
 async def update_all_messages(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Функция бновляет все сообщения пользователя в базе данных, добавляя символ )
+    """
     user_username = update.message.from_user.username
 
     try:
@@ -412,9 +425,12 @@ async def update_all_messages(update: Update, context: ContextTypes.DEFAULT_TYPE
  
 def main():
 
-    init_db()
+    init_db()#инициализирует базу данных, создавая необходимые таблицы. 
+    #Это выполняется до запуска бота, чтобы база данных была подготовлена.
 
+    #Создание и настройка бота:
     application = ApplicationBuilder().token(TOKEN).build()
+    #Добавление обработчиков команд:
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("return_all_messages", return_all_messages))
     application.add_handler(CommandHandler("delete_all_messages", delete_all_messages))
@@ -422,8 +438,12 @@ def main():
     application.add_handler(CommandHandler("get_historical_rates", get_historical_rates))
     application.add_handler(CommandHandler("get_rates", get_rates))
     application.add_handler(CommandHandler("plot", plot))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
+    #Добавление обработчика для текстовых сообщений:
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo)) #Этот обработчик реагирует на все текстовые сообщения, 
+    #которые не являются командами (например, /start)
+    #Запуск бота. Бот начинает слушать входящие обновления с помощью метода run_polling().
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
+#Запуск основной функции при старте программы
 if __name__ == "__main__":
     main()
