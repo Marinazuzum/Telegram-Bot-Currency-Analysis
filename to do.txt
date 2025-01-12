@@ -1,1 +1,82 @@
- Оптимизировать запросы на API только тех дней, которые не записаны в базе
+Оптимизировать запросы на API только тех дней, которые не записаны в базе
+Проверять, записанные данные по изменению валюты саммые последние в дне 
+
+Пример реализации:
+import requests
+from datetime import datetime, timedelta
+import sqlite3 #это стандартная библиотека Python для работы с базами данных SQLite
+
+# Подключение к базе данных
+def get_db_connection():
+    conn = sqlite3.connect('currency.db')  # Поменяйте на вашу базу данных
+    return conn
+
+# Получение списка дат, для которых уже есть записи в базе
+def get_existing_dates():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT DISTINCT date FROM currency_data")
+    existing_dates = [row[0] for row in cursor.fetchall()]
+    conn.close()
+    return existing_dates
+
+# Проверка, являются ли данные для данного дня актуальными
+def is_data_fresh(date):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT timestamp FROM currency_data WHERE date = ?", (date,))
+    result = cursor.fetchone()
+    conn.close()
+
+    if result:
+        # Проверяем, является ли запись актуальной (например, в пределах 24 часов)
+        last_updated = datetime.strptime(result[0], "%Y-%m-%d %H:%M:%S")
+        if (datetime.now() - last_updated).days < 1:  # Если данные обновлены за последние 24 часа
+            return True
+    return False
+
+# Запрос данных о валюте с API
+def fetch_currency_data(date):
+    url = f"https://api.exchangerate-api.com/v4/latest/USD"  # Пример API для валют
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.json()
+        return data['rates']  # Возвращаем курсы валют
+    return None
+
+# Сохранение данных в базе
+def save_currency_data(date, data):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    for currency, rate in data.items():
+        cursor.execute("INSERT INTO currency_data (date, currency, rate, timestamp) VALUES (?, ?, ?, ?)",
+                       (date, currency, rate, timestamp))
+    conn.commit()
+    conn.close()
+
+# Основной процесс
+def update_currency_data():
+    existing_dates = get_existing_dates()
+    today = datetime.now().date()
+
+    # Проверяем, если данные для сегодняшнего дня еще не записаны или устарели
+    if str(today) not in existing_dates or not is_data_fresh(str(today)):
+        # Получаем данные с API
+        data = fetch_currency_data(today)
+        if data:
+            # Сохраняем данные в базу
+            save_currency_data(str(today), data)
+            print(f"Data for {today} saved successfully.")
+        else:
+            print(f"Failed to fetch data for {today}.")
+    else:
+        print(f"Data for {today} is already up-to-date.")
+
+# Запуск процесса обновления
+update_currency_data()
+""" Как это работает:
+Каждый день перед отправкой запроса к API проверяется, есть ли уже данные в базе для текущей даты.
+Если данные есть, проверяется, свежие ли они.
+Если данные устарели или их нет, выполняется запрос к API и сохранение данных в базу.
+Этот подход помогает уменьшить количество запросов к API, запрашивая только те данные, которые еще не были сохранены или нуждаются в обновлении.
