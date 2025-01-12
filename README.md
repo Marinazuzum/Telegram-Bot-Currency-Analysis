@@ -19,23 +19,9 @@ git clone https://github.com/Marinazuzum/Telegram-Bot-Currency-Analysis.git
 cd Telegram-Bot-Currency-Analysis
 ```
 
-2. Create a `.env` file in the project root directory with the required environment variables (see Environment Variables section).
+2. Create a `.env` file in the project root directory with the required environment variables
 
-3. Build and run the containers:
 ```bash
-docker-compose up -d
-```
-
-This will start three containers:
-- `telegram-bot`: The main bot application
-- `postgres-db`: PostgreSQL database
-- `pgadmin`: Web interface for database management
-
-## Environment Variables
-
-Create a `.env` file with the following variables:
-
-```plaintext
 # Bot Configuration
 BOT_TOKEN=your_telegram_bot_token
 API_KEY=your_openexchangerates_api_key
@@ -50,6 +36,16 @@ POSTGRES_DB=your_database_name
 PGADMIN_DEFAULT_EMAIL=your_email@domain.com
 PGADMIN_DEFAULT_PASSWORD=your_pgadmin_password
 ```
+
+3. Build and run the containers:
+```bash
+docker-compose up -d
+```
+
+This will start three containers:
+- `telegram-bot`: The main bot application
+- `postgres-db`: PostgreSQL database
+- `pgadmin`: Web interface for database management
 
 ## Bot Commands
 
