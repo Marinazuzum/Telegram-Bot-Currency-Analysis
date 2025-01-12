@@ -30,7 +30,9 @@ API_KEY = os.getenv("API_KEY") # Ключ API для получения курс
 # позволяет программе ожидать завершения асинхронной задачи, прежде чем продолжить выполнение.
 #Это важно, чтобы не блокировать выполнение других задач, если код работает в асинхронном режиме (например, в рамках бота, который должен обрабатывать множество запросов одновременно)
 async def get_rates(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: 
-    # URL API для получения курсов валют
+    """
+    Функция дает курс валют текущую.
+    """# URL API для получения курсов валют
     url = 'https://openexchangerates.org/api/latest.json' #?app_id=6325952bd484428489f6aa5cbd05b08b" (В API-запросах параметры часто передаются в URL как ключ-значение пары. Например, в данном случае ключ app_id содержит значение токена, который используется для аутентификации в сервисе API.)
     # Параметры запроса к API
     params = {
@@ -47,20 +49,17 @@ async def get_rates(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     #response.text — это строка, содержащая текстовый ответ от API, который обычно в формате JSON или другом текстовом формате
     # Парсит ответ от сервера в формат JSON, чтобы можно было легко работать с полученными данными. в Python-словарь
     data = response.json() 
-
     # Извлечение курсов валют, базовой валюты и временной метки из ответа.
     rates = data.get("rates",{})
     base_currency = data.get("base")
     timestamp = data.get("timestamp")
     date= datetime.datetime.fromtimestamp(timestamp).date() # Преобразование временной метки в дату.
-
     # Подключение к базе данных PostgreSQL.
     conn=psycopg2.connect(URL) #то значение этой переменной ( из .env файла) будет содержать такую строку подключения.
     cursor = conn.cursor()
     #Курсор — это объект, который позволяет работать с результатами SQL-запросов. 
     #Он выполняет запросы, получает результаты и управляет транзакциями.
-
-     # Цикл по всем валютам и их курсам
+    # Цикл по всем валютам и их курсам
     for currency, rate in rates.items():
         # Выполнение SQL-запроса для вставки или обновления данных. Передаете фактические значения в виде кортежа или списка:
         cursor.execute("""
@@ -191,19 +190,31 @@ async def get_historical_rates(update: Update, context: ContextTypes.DEFAULT_TYP
     )
 
 async def plot(update: Update, context: ContextTypes.DEFAULT_TYPE)-> None:
-
-    currency = context.args[0]
+    #Объект Update содержит информацию о входящем сообщении, например, текст, пользователя и другие данные. Это объект, 
+    # который приходит в вашу функцию, когда пользователь отправляет команду.
+    #объект context, который предоставляет доступ к дополнительной информации о контексте команды, например, аргументам команды, состоянию и т. д. 
+    # В данном случае, context.args[0] — это первый аргумент команды, который будет валютой, запрашиваемой пользователем
+    """
+    Функция рисует график курса валют за указанный период.
+    """
+    currency = context.args[0] #пользователь отправил команду с валютой, например: /plot USD
     await update.message.reply_text(f"Данные по {currency}")
-    try:
-     #Что делает: Начинает блок обработки исключений для отлова ошибок при работе с базой данных.
-     # Почему нужно? Работа с БД мб подвержена множ ошибок (например, проблемы с подкл)
+    #метод отправляет текстовое сообщение обратно пользователю в чат. Сообщение будет содержать информацию о валюте, 
+    #переданной в команду (например, "Данные по USD").
+    try: #Начинает блок обработки исключений для отлова ошибок при работе с базой данных.
+     #Почему: Работа с БД мб подвержена множ ошибок (например, проблемы с подкл)
         conn =psycopg2.connect(URL)
         #Устанавливает соединение с БД исп URL.Соединение необх для выполнения SQL-запросов
         cursor =conn.cursor()
-        #Создает объект cursor, который используется для выполнения SQL-запросов. Cursor- это интерфейс для
-        cursor.execute(f"select date, rate from rates where currency = '{currency}' and date >= '2024-12-01';")
-        result = cursor.fetchall()
-        #await update.message.reply_text (f"Данные по {result}")
+        #Создает объект cursor, который используется для выполнения SQL-запросов. 
+        # f-строки для вставки переменной currency в запрос
+        cursor.execute(f"""select date, rate from rates where currency = '{currency}' 
+                        and date >= '2024-12-01'
+                        order by date;""")
+        #""" использование для переноса строки до и после
+        result = cursor.fetchall() #Извлекает все строки, возвращенные запросом, и сохраняет их в переменную result
+        #Он возвращает список кортежей, где каждый кортеж представляет собой одну строку из результатов запроса.
+        # await update.message.reply_text (f"Данные по {result}")
         conn.commit() 
         #Фиксируем изменение в транзакции
         cursor.close()
@@ -214,7 +225,6 @@ async def plot(update: Update, context: ContextTypes.DEFAULT_TYPE)-> None:
         await update.message.reply_text(f'Ошибка:{e}')
 
     date = [datetime.datetime.strftime(d[0], '%Y-%m-%d') for d in result]
-    #date = datetime.datetime.fromtimestamp(timestamp).date()
     #получили список дат по валюте
     rates = [d[1] for d in result]
     #получили список значений обменного курса по валюте
@@ -222,11 +232,15 @@ async def plot(update: Update, context: ContextTypes.DEFAULT_TYPE)-> None:
     await update.message.reply_text(f"Данные по {date}")
     await update.message.reply_text(f"Данные по {rates}")
 
-    plt.figure(figsize= (10,6))
-    #Создаем стандартный график размером 10 на 6
-    plt.plot(date,rates)
+    plt.figure(figsize= (14,8))
+    #Создаем стандартный график размером 14 на 8
     #dates  значение по осии x, rates значение по оси  y
-
+    plt.plot(date,rates,marker = 'o', label= f"Обменный курс USD к {currency}")
+    plt.xlabel ('Дата')
+    plt.ylabel ('Обменный курс')
+    plt.legend #Добавляем легенду
+    plt.grid #Добавляем сетку
+    plt.xticks(rotation=40) #изменяем угол наклона надписей на оси X
     buf =io.BytesIO()
     #Создает объект, который используем как буфер обм для хранения изобр
     plt.savefig(buf, format ='png')
@@ -237,14 +251,25 @@ async def plot(update: Update, context: ContextTypes.DEFAULT_TYPE)-> None:
     #Закрывакм график, чтобы освободить ресурсы (память)
     await update.message.reply_photo(photo=buf, caption =f"График обменного курса USD к {currency}")
 
-def init_db():
-    try:
+def init_db(): # Фунция, которая не принимает аргументов. Она выполняет операции по подключению к базе данных и созданию таблиц.
+    """
+    Функция для инициализации базы данных PostgreSQL, включая создание нескольких таблиц
+    """
+    try: #блок происходит подключение к базе данных PostgreSQL с помощью библиотеки psycopg2
         conn=psycopg2.connect(URL)
         cursor = conn.cursor()
-
-        cursor.execute("CREATE TABLE IF NOT EXISTS messages (id SERIAL PRIMARY KEY, text TEXT, username TEXT);")
-
-        # Создание таблицы
+        
+        #Создания таблицы messages, если она не существует.  
+        # Предназначена для хранения простых сообщений от пользователей. Таблица имеет три столбца: 
+        # id: автоинкрементный идентификатор (первичный ключ),
+        # text: текст сообщения,
+        # username: имя пользователя, отправившего сообщение.
+        #прямой запрос cursor.execute.Запрос пишется непосредственно в методе cursor.execute 
+        cursor.execute("CREATE TABLE IF NOT EXISTS messages (id SERIAL PRIMARY KEY, text TEXT, username TEXT);") 
+        
+        # Создание таблицы  message_updates, если она еще не существует
+        #предназначена для хранения более подробной информации о сообщениях
+        #Запрос записывается в отдельной переменной create_table_query с последующим cursor.execute:
         create_table_query = """
         CREATE TABLE IF NOT EXISTS message_updates (
             id SERIAL PRIMARY KEY,
@@ -257,6 +282,8 @@ def init_db():
         );
         """
         cursor.execute(create_table_query)
+        #где user_id: идентификатор пользователя (BIGINT),
+        #is_bot: булевое значение, указывающее, является ли отправитель ботом,
 
         conn.commit()
         cursor.close()
@@ -269,7 +296,7 @@ def init_db():
         conn=psycopg2.connect(URL)
         cursor = conn.cursor()
 
-        # Создание таблицы
+        # Создание таблицы rates если она не существует
         cursor.execute("""
                        CREATE TABLE IF NOT EXISTS rates 
                        (base_currency TEXT,
@@ -286,16 +313,23 @@ def init_db():
         print(f'Ошибка:{e}') 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: 
+    """
+    Функция для начальной настройки взаимодействия с пользователем, отправляя приветственное сообщение
+    """
     await update.message.reply_text("Привет, я бот с буткемпа")
 
 async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Функция эхо-ответ пользователю, сохранение данных в базу
+    """
     user_messages = update.message.text 
     user_username = update.message.from_user.username
 
     await update.message.reply_text(update)
     await update.message.reply_text(user_messages)
     await update.message.reply_text(user_username)
-
+    
+    # Сохранение в базу данных
     try:
         conn=psycopg2.connect(URL)
         cursor=conn.cursor()
