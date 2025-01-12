@@ -15,8 +15,8 @@ This Telegram bot allows users to fetch and analyze currency exchange rates. It 
 
 1. Clone the repository:
 ```bash
-git clone [your-repository-url]
-cd [repository-directory]
+git clone https://github.com/Marinazuzum/Telegram-Bot-Currency-Analysis.git
+cd Telegram-Bot-Currency-Analysis
 ```
 
 2. Create a `.env` file in the project root directory with the required environment variables (see Environment Variables section).
