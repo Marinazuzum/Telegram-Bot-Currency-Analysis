@@ -11,6 +11,30 @@ This Telegram bot allows users to fetch and analyze currency exchange rates. It 
 - User message tracking and management
 - Interactive progress visualization for long operations
 
+## Getting API Keys
+
+### Telegram Bot Token (BotFather)
+1. Open Telegram and search for `@BotFather`
+2. Start a chat with BotFather and send `/newbot`
+3. Follow the instructions:
+   - Provide a name for your bot
+   - Provide a username for your bot (must end in 'bot')
+4. BotFather will give you a token. It looks like this: `123456789:ABCdefGHIjklmNOPQrstUVwxyz`
+5. Copy this token and save it as `BOT_TOKEN` in your `.env` file
+
+### OpenExchangeRates API Key
+1. Go to [OpenExchangeRates](https://openexchangerates.org/)
+2. Click "Sign Up" and create a free account
+3. After registration, go to your account dashboard
+4. Find your API key under "App IDs"
+5. Copy the API key and save it as `API_KEY` in your `.env` file
+
+Note: The free plan has some limitations:
+- Updates every hour
+- USD as base currency only
+- Limited number of requests per month
+- Historical data access may be restricted
+
 ## Installation with Docker
 
 1. Clone the repository:
@@ -27,14 +51,14 @@ BOT_TOKEN=your_telegram_bot_token
 API_KEY=your_openexchangerates_api_key
 
 # Database Configuration
-DATABASE_URL=postgresql://user:password@db:5432/dbname
-POSTGRES_USER=your_postgres_user
-POSTGRES_PASSWORD=your_postgres_password
-POSTGRES_DB=your_database_name
+DATABASE_URL=postgresql://postgres:postgres@db:5432/dbname
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_DB=telegram_bot_db
 
 # PGAdmin Configuration
-PGADMIN_DEFAULT_EMAIL=your_email@domain.com
-PGADMIN_DEFAULT_PASSWORD=your_pgadmin_password
+PGADMIN_DEFAULT_EMAIL=admin@example.com
+PGADMIN_DEFAULT_PASSWORD=admin
 ```
 
 3. Build and run the containers:
