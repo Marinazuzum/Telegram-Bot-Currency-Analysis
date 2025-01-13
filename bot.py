@@ -16,6 +16,14 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
+
+# logging.debug("Это сообщение для отладки")
+# logging.info("Информационное сообщение")
+# logging.warning("Предупреждение о возможной проблеме")
+# logging.error("Произошла ошибка")
+# logging.critical("Критическая ошибка!")
+
+
 # Чтение переменных окружения:
 TOKEN = os.getenv("BOT_TOKEN") # Токен для работы Telegram-бота
 #Python пытается получить значение переменной окружения с именем BOT_TOKEN из текущей среды (например, из операционной системы, 
@@ -229,17 +237,36 @@ async def plot(update: Update, context: ContextTypes.DEFAULT_TYPE)-> None:
         # cursor.execute(f"""select date, rate from rates where currency = '{currency}' 
         #                 and date >= '2024-12-01'
         #                 order by date;""")
-        cursor.execute(f"""
+        
+        # cursor.execute(f"""
+        #     SELECT date, rate 
+        #     FROM rates 
+        #     WHERE currency = '{currency}' 
+        #     AND date >= (
+        #         SELECT MAX(date) - INTERVAL '7 days'
+        #         FROM rates
+        #         WHERE currency = '{currency}'
+        #     )
+        #     ORDER BY date;
+        # """)
+        #!!!Безопасный подход: Используйте параметризованные запросы %s 
+        # При использовании %s, значения передаются отдельно от строки запроса и не интерпретируются как SQL-код
+        #Общая рекомендация:
+        #Всегда используйте параметризованные запросы при работе с пользовательскими данными.
+        #Избегайте использования f-строк для формирования SQL-запросов, если они содержат пользовательские данные.
+        #Проверяйте вводимые данные на уровне приложения, чтобы минимизировать риски.
+        cursor.execute("""
             SELECT date, rate 
             FROM rates 
-            WHERE currency = '{currency}' 
+            WHERE currency = %s 
             AND date >= (
                 SELECT MAX(date) - INTERVAL '7 days'
                 FROM rates
-                WHERE currency = '{currency}'
+                WHERE currency = %s
             )
             ORDER BY date;
-        """)
+        """, (currency, currency))
+
         #""" использование для переноса строки до и после
         result = cursor.fetchall() #Извлекает все строки, возвращенные запросом, и сохраняет их в переменную result
         #Он возвращает список кортежей, где каждый кортеж представляет собой одну строку из результатов запроса.
@@ -250,7 +277,8 @@ async def plot(update: Update, context: ContextTypes.DEFAULT_TYPE)-> None:
         conn.close()
         #Закрывает курсор и соединение с базой данных. Открытые соединения потребляют ресурсы.
     except Exception as e:
-        print(f'Ошибка:{e}')
+        logging.error(f"Произошла ошибка:{e}")
+        #print(f'Ошибка:{e}')
         await update.message.reply_text(f'Ошибка:{e}')
 
     date = [datetime.datetime.strftime(d[0], '%Y-%m-%d') for d in result]
@@ -404,7 +432,15 @@ async def return_all_messages(update: Update, context: ContextTypes.DEFAULT_TYPE
         cursor.execute(f"SELECT text from messages where username = '{user_username}';")
         #Выбираем всю информацию из таблицы messages
         result = cursor.fetchall()
-        await update.message.reply_text(result)
+
+        logging.info(result)
+        decoded_results = [f' {row[0]}' for row in result]
+        logging.info(decoded_results)
+
+        formatted_results = "\n".join(decoded_results)
+
+        await update.message.reply_text(decoded_results)
+        await update.message.reply_text(formatted_results)
 
         conn.commit()
         cursor.close()
