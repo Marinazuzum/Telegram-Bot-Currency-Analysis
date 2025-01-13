@@ -194,7 +194,7 @@ def authorize(func):
     @wraps(func)
     async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE, *args, **kwargs):
         user_username = update.message.from_user.username
-        return await func(update, context, *args, **kwargs)
+        return await func(update, context, *args, **kwargs)#!!!для использования декоратора раскоментировать ниже и закомментировать эту строку
         # if user_username == "avonadzh":
         #     return await func(update, context, *args, **kwargs)
         # else:
