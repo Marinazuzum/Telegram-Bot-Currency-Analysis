@@ -8,6 +8,7 @@ import datetime # Для работы с датами и временем.
 import logging # Для логирования событий в программ
 import requests # Для выполнения HTTP-запросов
 import matplotlib.pyplot as plt # Для визуализации данных
+from functools import wraps
 
 
 # Настройка логирования. Задаётся формат логов и уровень (INFO)
@@ -188,7 +189,20 @@ async def get_historical_rates(update: Update, context: ContextTypes.DEFAULT_TYP
         f"✅ {fireworks} Все данные за период {start_date} — {end_date} успешно загружены! {fireworks}\n"
         f"Спасибо, что воспользовались ботом!"
     )
+# Декоратор для проверки авторизации
+def authorize(func):
+    @wraps(func)
+    async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE, *args, **kwargs):
+        user_username = update.message.from_user.username
+        return await func(update, context, *args, **kwargs)
+        # if user_username == "avonadzh":
+        #     return await func(update, context, *args, **kwargs)
+        # else:
+        #     await update.message.reply_text("У вас нет прав для выполнения этой команды.")
+    return wrapper
 
+# Основная функция с декоратором
+@authorize
 async def plot(update: Update, context: ContextTypes.DEFAULT_TYPE)-> None:
     #Объект Update содержит информацию о входящем сообщении, например, текст, пользователя и другие данные. Это объект, 
     # который приходит в вашу функцию, когда пользователь отправляет команду.
@@ -197,20 +211,35 @@ async def plot(update: Update, context: ContextTypes.DEFAULT_TYPE)-> None:
     """
     Функция рисует график курса валют за указанный период.
     """
-    currency = context.args[0] #пользователь отправил команду с валютой, например: /plot USD
+    try:
+        currency = context.args[0].upper() #пользователь отправил команду с валютой, например: /plot USD
+    except:
+        await update.message.reply_text(f"Ошибка: укажите валюту в формате /plot USD")
+
     await update.message.reply_text(f"Данные по {currency}")
     #метод отправляет текстовое сообщение обратно пользователю в чат. Сообщение будет содержать информацию о валюте, 
     #переданной в команду (например, "Данные по USD").
     try: #Начинает блок обработки исключений для отлова ошибок при работе с базой данных.
      #Почему: Работа с БД мб подвержена множ ошибок (например, проблемы с подкл)
-        conn =psycopg2.connect(URL)
+        conn = psycopg2.connect(URL)
         #Устанавливает соединение с БД исп URL.Соединение необх для выполнения SQL-запросов
-        cursor =conn.cursor()
+        cursor = conn.cursor()
         #Создает объект cursor, который используется для выполнения SQL-запросов. 
         # f-строки для вставки переменной currency в запрос
-        cursor.execute(f"""select date, rate from rates where currency = '{currency}' 
-                        and date >= '2024-12-01'
-                        order by date;""")
+        # cursor.execute(f"""select date, rate from rates where currency = '{currency}' 
+        #                 and date >= '2024-12-01'
+        #                 order by date;""")
+        cursor.execute(f"""
+            SELECT date, rate 
+            FROM rates 
+            WHERE currency = '{currency}' 
+            AND date >= (
+                SELECT MAX(date) - INTERVAL '7 days'
+                FROM rates
+                WHERE currency = '{currency}'
+            )
+            ORDER BY date;
+        """)
         #""" использование для переноса строки до и после
         result = cursor.fetchall() #Извлекает все строки, возвращенные запросом, и сохраняет их в переменную result
         #Он возвращает список кортежей, где каждый кортеж представляет собой одну строку из результатов запроса.
@@ -229,8 +258,8 @@ async def plot(update: Update, context: ContextTypes.DEFAULT_TYPE)-> None:
     rates = [d[1] for d in result]
     #получили список значений обменного курса по валюте
 
-    await update.message.reply_text(f"Данные по {date}")
-    await update.message.reply_text(f"Данные по {rates}")
+    # await update.message.reply_text(f"Данные по {date}")
+    # await update.message.reply_text(f"Данные по {rates}")
 
     plt.figure(figsize= (14,8))
     #Создаем стандартный график размером 14 на 8
@@ -326,7 +355,7 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_messages = update.message.text 
     user_username = update.message.from_user.username
 
-    await update.message.reply_text(update)#Используется для отладки, чтобы понять, какие данные Telegram передал в объекте update. 
+    await update.message.reply_text(update) #Используется для отладки, чтобы понять, какие данные Telegram передал в объекте update. 
     #Это помогает при разработке новых функций
     await update.message.reply_text(f"Привет, @{user_username}! Вы написали: {user_messages}")#бот повторяет текст, отправленный пользователем.
     await update.message.reply_text(user_username) #Это может быть полезно, если бот логирует действия пользователей 
